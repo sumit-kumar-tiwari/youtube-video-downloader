@@ -17,7 +17,8 @@ exports.handler = async function (event, context) {
   }
 
   // This is the actual API we will call from our serverless function
-  const COBALT_API_URL = 'https://co.wuk.sh/api/json';
+  //const COBALT_API_URL = 'https://co.wuk.sh/api/json';
+  const COBALT_API_URL = 'https://api.cobalt.tools/api/json';
 
   try {
     const response = await fetch(COBALT_API_URL, {
@@ -57,4 +58,5 @@ exports.handler = async function (event, context) {
       body: JSON.stringify({ error: `Serverless function error: ${error.message}` }),
     };
   }
+
 };
