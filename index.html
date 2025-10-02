@@ -492,7 +492,7 @@
             resultDiv.innerHTML = '';
             loaderContainer.innerHTML = '<div class="loader"></div>';
             try {
-                const response = await fetch(`https://python-yt-api-t7cr.onrender.com/api/info?url=${encodeURIComponent(videoURL)}`);
+                const response = await fetch(`https://subject166.pythonanywhere.com/api/info?url=${encodeURIComponent(videoURL)}`);
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(errorData.error || `Proxy Error: ${response.statusText}`);
@@ -637,5 +637,6 @@
         <p>&copy; 2025 Vortex Downloader | <a href="#" id="privacy-link">Privacy Policy</a></p>
     </footer>
 </body>
+
 
 </html>
