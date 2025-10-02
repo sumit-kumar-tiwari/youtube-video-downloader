@@ -1,6 +1,5 @@
 // File: netlify/functions/getYoutubeInfo.js
 
-// Ab humein node-fetch ki zaroorat nahi, Netlify ke naye versions mein fetch built-in hai.
 exports.handler = async function (event, context) {
   const videoURL = event.queryStringParameters.url;
 
@@ -11,13 +10,14 @@ exports.handler = async function (event, context) {
     };
   }
 
-  // Yeh ek nayi aur alag API hai
+  // Hum is public API ko wapas use karenge jo YouTube ki blocking handle karti hai
   const API_ENDPOINT = `https://yt-dlx.vercel.app/api/info?url=${encodeURIComponent(videoURL)}`;
 
   try {
     const response = await fetch(API_ENDPOINT);
     if (!response.ok) {
-        throw new Error(`API responded with status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API responded with status: ${response.status}`);
     }
     const data = await response.json();
 
