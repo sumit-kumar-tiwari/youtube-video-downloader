@@ -519,35 +519,34 @@
 
         // --- UPDATED displayResult Function ---
         // --- UPDATED displayResult Function for New API ---
-        function displayResult(details) {
+        // --- YEH FUNCTION REPLACE KARO ---
+        function displayResult(data) {
+            const details = data.videoDetails;
+            const formats = data.formats;
             const sanitizedTitle = details.title.replace(/[<>:"/\\|?*]/g, '');
 
-            let buttonsHTML = '';
-            if (details.picker && details.picker.length > 0) {
-                // Filter for video streams
-                const videoStreams = details.picker.filter(p => p.type === 'video');
+            // Best format dhoondho (jisme video aur audio dono ho)
+            const bestFormat =
+                formats.find(f => f.qualityLabel === '1080p' && f.hasAudio && f.hasVideo) ||
+                formats.find(f => f.qualityLabel === '720p' && f.hasAudio && f.hasVideo) ||
+                formats.find(f => f.hasAudio && f.hasVideo); // Fallback
 
-                buttonsHTML = videoStreams.map(stream => {
-                    const quality = stream.quality || '';
-                    const fileSize = stream.size ? `(${stream.size})` : '';
-                    return `<a href="${stream.url}" class="download-link" download="${sanitizedTitle}.mp4">
-                                Download ${quality} ${fileSize}
-                            </a>`;
-                }).join('');
-            } else if (details.url) {
-                // Fallback for single URL response
-                buttonsHTML = `<a href="${details.url}" class="download-link" download="${sanitizedTitle}.mp4">
-                                Download Video
-                            </a>`;
+            let downloadButtonHTML = '';
+            if (bestFormat) {
+                downloadButtonHTML = `
+            <a href="${bestFormat.url}" class="download-link" download="${sanitizedTitle}.mp4">
+                Download (${bestFormat.qualityLabel || 'Best'})
+            </a>
+        `;
             } else {
-                buttonsHTML = '<p style="color: #ff8a8a;">No downloadable video formats found.</p>';
+                downloadButtonHTML = '<p style="color: #ff8a8a;">No downloadable video with audio found.</p>';
             }
 
             resultDiv.innerHTML = `
-                <img src="${details.thumbnail}" alt="Video Thumbnail">
-                <p id="video-title">${details.title}</p>
-                ${buttonsHTML}
-            `;
+        <img src="${details.thumbnails[details.thumbnails.length - 1].url}" alt="Video Thumbnail">
+        <p id="video-title">${details.title}</p>
+        ${downloadButtonHTML}
+    `;
         }
         /* --- NEW: Navigation Logic --- */
         const homeBtn = document.getElementById('home-btn');
