@@ -1,0 +1,39 @@
+Project Log: Challenges in Building a Web-Based Video Downloader
+This document outlines the development process and the series of challenges encountered while building a web application designed to download videos from public web sources like YouTube.
+
+1. Initial Approach: Frontend + Public APIs
+The project began with a modern, responsive frontend built with HTML, CSS, and JavaScript. The initial plan was to call a free, third-party public API to fetch video download links.
+
+Problem:
+
+CORS Errors & Unreliability: Direct calls from the browser were blocked by CORS policy. Even when proxied through a Netlify Function, the public APIs (like the Cobalt API) proved to be extremely unreliable. The main API we used was permanently shut down, and alternatives were frequently offline, leading to a "Failed to fetch" error.
+
+2. The Self-Hosted Backend: Python, Flask, and yt-dlp
+To solve the reliability issue, the project pivoted to a self-hosted backend approach. We developed a lightweight API using Python with the Flask framework. The core download logic was handled by the powerful yt-dlp library.
+
+The primary challenge then became finding a suitable free platform to host this Python API.
+
+Hosting Attempts & Failures:
+Render.com:
+
+Issue: IP Blocking. The Flask API was successfully deployed, but requests to YouTube failed. yt-dlp returned a "Sign in to confirm you’re not a bot" error. This indicated that YouTube's servers were actively blocking requests coming from the known IP range of the Render.com free-tier servers.
+
+PythonAnywhere:
+
+Issue: Free Tier Whitelist. The API deployed successfully, but yt-dlp could not access YouTube. The error was a 403 Forbidden proxy error. This was because PythonAnywhere's free "Beginner" accounts restrict outbound internet access to a specific list of whitelisted sites, which does not include YouTube's video servers.
+
+Google Colab + ngrok:
+
+Issue: IP Blocking & Instability. This method was a clever workaround to get a free, running Python environment and expose it to the web. However, it faced two major problems:
+
+It was not a permanent solution, as Colab runtimes disconnect and ngrok URLs change on every restart.
+
+Ultimately, it faced the same core problem as Render.com: YouTube eventually detected and blocked the IP address of the Google Colab server, causing the API to fail and return an invalid response to the frontend.
+
+3. Pivot to Instagram
+A brief attempt was made to pivot the project to an Instagram audio downloader. However, this proved even more difficult, as Instagram's anti-scraping measures are far more aggressive and almost always require a logged-in session (cookies) for reliable access.
+
+## Conclusion
+The key takeaway from this project is that building a reliable web-based downloader is not feasible using free, shared hosting platforms (like Render, PythonAnywhere, or Colab). Major content platforms like YouTube and Instagram are very effective at detecting and blocking automated requests originating from the known IP ranges of these large cloud providers.
+
+The only reliable and permanent solution is to host the backend API on a low-cost Virtual Private Server (VPS). A VPS provides a dedicated, clean IP address that is not associated with large-scale free hosting, and is therefore highly unlikely to be blocked.
