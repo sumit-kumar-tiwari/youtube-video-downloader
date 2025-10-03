@@ -448,191 +448,149 @@
     </div>
 
     <script>
-        const downloadForm = document.getElementById('download-form');
-        const urlInput = document.getElementById('url-input');
-        const loaderContainer = document.getElementById('loader-container');
-        const resultDiv = document.getElementById('result');
-        const body = document.body;
+    // Aapke saare purane variables
+    const downloadForm = document.getElementById('download-form');
+    const urlInput = document.getElementById('url-input');
+    const loaderContainer = document.getElementById('loader-container');
+    const resultDiv = document.getElementById('result');
+    const body = document.body;
 
-        function getRandomColor() {
-            const letters = '0123456789ABCDEF';
-            let color = '#';
-            for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
-            return color;
-        }
+    // Aapka background color waala effect (waisa ka waisa)
+    function getRandomColor() {
+        const letters = '0123456789ABCDEF';
+        let color = '#';
+        for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
+        return color;
+    }
+    let currentGradientVar = 2;
+    function setRandomGradientBackground() {
+        const colors = [getRandomColor(), getRandomColor(), getRandomColor(), getRandomColor()];
+        const angle = Math.floor(Math.random() * 360);
+        const newGradient = `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+        body.style.setProperty(`--gradient-${currentGradientVar}`, newGradient);
+        body.classList.toggle('fade-to-after');
+        currentGradientVar = (currentGradientVar === 1) ? 2 : 1;
+    }
+    setRandomGradientBackground();
+    setInterval(setRandomGradientBackground, 10000);
 
-        // --- NEW: Background logic for smooth transitions ---
-        let currentGradientVar = 2; // Start by updating gradient-2, then gradient-1
-
-        function setRandomGradientBackground() {
-            const colors = [getRandomColor(), getRandomColor(), getRandomColor(), getRandomColor()];
-            const angle = Math.floor(Math.random() * 360);
-            const newGradient = `linear-gradient(${angle}deg, ${colors.join(', ')})`;
-
-            // Update the CSS variable for the *next* gradient
-            body.style.setProperty(`--gradient-${currentGradientVar}`, newGradient);
-
-            // Toggle the class to trigger the opacity transition
-            body.classList.toggle('fade-to-after');
-
-            // Switch the target gradient variable for the next cycle
-            currentGradientVar = (currentGradientVar === 1) ? 2 : 1;
-        }
-
-        // Call it once immediately to set the first random gradient
-        setRandomGradientBackground();
-
-        // Change background every 10 seconds (adjust as needed)
-        setInterval(setRandomGradientBackground, 10000); // 10000ms = 10 seconds
-
-        downloadForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const videoURL = urlInput.value.trim();
-            if (videoURL === '') { alert('Please enter a valid YouTube URL.'); return; }
-            resultDiv.innerHTML = '';
-            loaderContainer.innerHTML = '<div class="loader"></div>';
+    // --- YEH DOWNLOADER KA NAYA AUR CORRECTED LOGIC HAI ---
+    downloadForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const videoURL = urlInput.value.trim();
+        if (videoURL === '') { alert('Please enter a valid YouTube URL.'); return; }
+        resultDiv.innerHTML = '';
+        loaderContainer.innerHTML = '<div class="loader"></div>';
+        try {
+            // !!! --- SABSE ZAROORI: YAHAN APNA NAYA NGROK URL DAALEIN --- !!!
+            const response = await fetch(`https://caffeinic-margie-jumpily.ngrok-free.dev/api/info?url=${encodeURIComponent(videoURL)}`);
+            
+            const textResponse = await response.text();
+            let data;
             try {
-                const response = await fetch(`https://caffeinic-margie-jumpily.ngrok-free.dev/api/info?url=${encodeURIComponent(videoURL)}`);
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Proxy Error: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-
-                if (data.status === 'error') {
-                    throw new Error(data.text || 'Failed to get video details from API.');
-                }
-
-                // Humara purana displayResult function is data ke saath kaam karega
-                displayResult(data);
-
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                resultDiv.innerHTML = `<p style="color: #ff8a8a; margin-top: 20px;">Error: ${error.message}</p>`;
-            } finally {
-                loaderContainer.innerHTML = '';
+                data = JSON.parse(textResponse);
+            } catch (e) {
+                throw new Error("Received an invalid response from the server. The API might be down.");
             }
-        });
 
-        // --- UPDATED displayResult Function ---
-        // --- UPDATED displayResult Function for New API ---
-        // --- YEH FUNCTION REPLACE KARO ---
-        function displayResult(data) {
-            const details = data.videoDetails;
-            const formats = data.formats;
-            const sanitizedTitle = details.title.replace(/[<>:"/\\|?*]/g, '');
+            if (!response.ok || data.error) {
+                throw new Error(data.error || 'Failed to fetch video details.');
+            }
+            displayResult(data);
 
-            // Best format dhoondho (jisme video aur audio dono ho)
-            const bestFormat =
-                formats.find(f => f.qualityLabel === '1080p' && f.hasAudio && f.hasVideo) ||
-                formats.find(f => f.qualityLabel === '720p' && f.hasAudio && f.hasVideo) ||
-                formats.find(f => f.hasAudio && f.hasVideo); // Fallback
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            resultDiv.innerHTML = `<p style="color: #ff8a8a; margin-top: 20px;">Error: ${error.message}</p>`;
+        } finally {
+            loaderContainer.innerHTML = '';
+        }
+    });
 
-            let downloadButtonHTML = '';
-            if (bestFormat) {
-                downloadButtonHTML = `
-            <a href="${bestFormat.url}" class="download-link" download="${sanitizedTitle}.mp4">
-                Download (${bestFormat.qualityLabel || 'Best'})
-            </a>
+    // --- YEH DISPLAY RESULT KA NAYA AUR CORRECTED LOGIC HAI ---
+    function displayResult(data) {
+        const details = data.videoDetails;
+        const formats = data.formats;
+
+        if (!details || !details.title || !details.thumbnails || !formats) {
+            resultDiv.innerHTML = `<p style="color: #ff8a8a;">Error: Incomplete data received from API.</p>`;
+            return;
+        }
+
+        const sanitizedTitle = details.title.replace(/[<>:"/\\|?*]/g, '');
+        const bestFormat =
+            formats.find(f => f.qualityLabel && f.qualityLabel.includes('1080p')) ||
+            formats.find(f => f.qualityLabel && f.qualityLabel.includes('720p')) ||
+            formats.find(f => f.url);
+
+        let downloadButtonHTML = '';
+        if (bestFormat && bestFormat.url) {
+            downloadButtonHTML = `
+                <a href="${bestFormat.url}" class="download-link" download="${sanitizedTitle}.mp4">
+                    Download (${bestFormat.qualityLabel || 'Best Quality'})
+                </a>`;
+        } else {
+            downloadButtonHTML = '<p style="color: #ff8a8a;">No downloadable video formats found.</p>';
+        }
+
+        resultDiv.innerHTML = `
+            <img src="${details.thumbnails[details.thumbnails.length - 1].url}" alt="Video Thumbnail">
+            <p id="video-title">${details.title}</p>
+            ${downloadButtonHTML}
         `;
-            } else {
-                downloadButtonHTML = '<p style="color: #ff8a8a;">No downloadable video with audio found.</p>';
-            }
+    }
 
-            resultDiv.innerHTML = `
-        <img src="${details.thumbnails[details.thumbnails.length - 1].url}" alt="Video Thumbnail">
-        <p id="video-title">${details.title}</p>
-        ${downloadButtonHTML}
-    `;
+    // Aapka Home button ka logic (waisa ka waisa)
+    const homeBtn = document.getElementById('home-btn');
+    homeBtn.addEventListener('click', () => {
+        location.reload();
+    });
+
+    // Aapka About modal aur contact form ka logic (waisa ka waisa)
+    const aboutBtn = document.getElementById('about-btn');
+    const aboutModal = document.getElementById('about-modal');
+    const closeModalBtn = aboutModal.querySelector('.close-btn');
+    const contactForm = document.getElementById('contact-form');
+    const formStatus = document.getElementById('form-status');
+
+    aboutBtn.addEventListener('click', () => { aboutModal.style.display = 'flex'; });
+
+    function closeModal() {
+        const modalContent = aboutModal.querySelector('.modal-content');
+        modalContent.classList.add('closing');
+        setTimeout(() => {
+            aboutModal.style.display = 'none';
+            modalContent.classList.remove('closing');
+        }, 500);
+    }
+    
+    closeModalBtn.addEventListener('click', closeModal);
+    aboutModal.addEventListener('click', (e) => {
+        if (e.target === aboutModal) {
+            closeModal();
         }
-        /* --- NEW: Navigation Logic --- */
-        const homeBtn = document.getElementById('home-btn');
+    });
 
-        homeBtn.addEventListener('click', () => {
-            location.reload(); // Page ko refresh karega
-        });
-
-
-        // --- 4. DOWNLOADER LOGIC --- 
-        // --- NEW HELPER FUNCTIONS ---
-        function formatDuration(seconds) {
-            if (isNaN(seconds)) return 'N/A';
-            const date = new Date(seconds * 1000);
-            const hh = date.getUTCHours();
-            const mm = date.getUTCMinutes();
-            const ss = date.getUTCSeconds().toString().padStart(2, '0');
-            if (hh) {
-                return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
-            }
-            return `${mm}:${ss}`;
-        }
-
-        function formatBytes(bytes, decimals = 2) {
-            if (!+bytes) return 'N/A';
-            const k = 1024;
-            const dm = decimals < 0 ? 0 : decimals;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-        }
-
-
-        /* --- NEW: Modal and Contact Form Logic --- */
-        const aboutBtn = document.getElementById('about-btn');
-        const aboutModal = document.getElementById('about-modal');
-        const closeModalBtn = aboutModal.querySelector('.close-btn');
-        const contactForm = document.getElementById('contact-form');
-        const formStatus = document.getElementById('form-status');
-        const privacyLink = document.getElementById('privacy-link'); // <-- NEW: Get the footer link
-
-        aboutBtn.addEventListener('click', () => { aboutModal.style.display = 'flex'; });
-        // ADD THIS NEW, IMPROVED CODE
-
-        // Function to handle closing the modal with animation
-        function closeModal() {
-            const modalContent = aboutModal.querySelector('.modal-content');
-            modalContent.classList.add('closing'); // Closing animation wali class lagao
-
-            // Animation poora hone ka intezar karo, fir modal ko hide karo
-            setTimeout(() => {
-                aboutModal.style.display = 'none'; // Animation ke baad hide karo
-                modalContent.classList.remove('closing'); // Class hata do taaki agli baar modal aache se khule
-            }, 500); // Yeh time (500ms) CSS ke animation duration se match hona chahiye
-        }
-
-        // Event listeners ko naye function se connect karo
-        closeModalBtn.addEventListener('click', closeModal);
-        aboutModal.addEventListener('click', (e) => {
-            if (e.target === aboutModal) {
-                closeModal();
-            }
-        });
-
-        contactForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            formStatus.textContent = 'Sending...';
-            const scriptURL = 'https://script.google.com/macros/s/AKfycbykYRZEu6ikjSCFRCJaQR7ZZWj-HzgftZRUQO7QRyWP2yc_7KPVOt--FNbcusKFC0Fr/exec'; // <-- IMPORTANT: PASTE YOUR URL HERE
-            const formData = new FormData(contactForm);
-
-            fetch(scriptURL, { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.result === 'success') {
-                        formStatus.style.color = '#28a745';
-                        formStatus.textContent = 'Message sent successfully!';
-                        contactForm.reset();
-                    } else {
-                        throw new Error(data.error || 'Unknown error');
-                    }
-                })
-                .catch(error => {
-                    formStatus.style.color = '#ff8a8a';
-                    formStatus.textContent = 'Error sending message.';
-                    console.error('Error!', error.message);
-                });
-        });
-    </script>
+    contactForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        formStatus.textContent = 'Sending...';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbykYRZEu6ikjSCFRCJaQR7ZZWj-HzgftZRUQO7QRyWP2yc_7KPVOt--FNbcusKFC0Fr/exec';
+        const formData = new FormData(contactForm);
+        fetch(scriptURL, { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.result === 'success') {
+                    formStatus.style.color = '#28a745';
+                    formStatus.textContent = 'Message sent successfully!';
+                    contactForm.reset();
+                } else { throw new Error(data.error || 'Unknown error'); }
+            })
+            .catch(error => {
+                formStatus.style.color = '#ff8a8a';
+                formStatus.textContent = 'Error sending message.';
+                console.error('Error!', error.message);
+            });
+    });
+</script>
     <footer>
         <p>&copy; 2025 Vortex Downloader | <a href="#" id="privacy-link">Privacy Policy</a></p>
     </footer>
@@ -640,6 +598,7 @@
 
 
 </html>
+
 
 
 
