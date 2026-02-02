@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vortex YouTube Downloader</title>
+    <style>
+        /* --- Google Font --- */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+        /* --- Basic Reset & Global Styles --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* Center vertically */
+            min-height: 100vh;
+            overflow-y: auto;
+            /* IMPORTANT: Scrolling enable kar diya */
+            position: relative;
+            color: #fff;
+            padding: 40px 0;
+            /* Thoda breathing space upar-niche taaki content chipke na */
+        }
+
+        /* --- New: Resolution Boxes Design --- */
+        .resolution-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            /* Boxes ke beech ka gap */
+            margin: 20px 0;
+        }
+
+        .res-box {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            /* Transparent Glass */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            /* Thoda rounded square */
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .res-box:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            /* Mouse le jane par thoda upar uthega */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Jab koi quality select ho jaye */
+        .res-box.selected {
+            background: #28a745;
+            /* Green Color (Theme Match) */
+            border-color: #28a745;
+            box-shadow: 0 0 15px rgba(40, 167, 69, 0.6);
+            /* Glow Effect */
+            font-weight: 700;
+            transform: scale(1.05);
+        }
+
+        /* Resolution Text (e.g. 1080p) */
+        .res-text {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* FPS Badge (e.g. 60 FPS) */
+        .fps-badge {
+            display: block;
+            /* Niche line mein layega */
+            font-size: 0.75rem;
+            font-weight: 400;
+            margin-top: 2px;
+            opacity: 0.8;
+            color: #ffd700;
+            /* Gold color for FPS */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Agar 60FPS nahi hai to grey rakho */
+        .fps-badge.low-fps {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* --- NEW: Smooth background transition using CSS Variables --- */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* Send behind content */
+            background-size: 400% 400%;
+            /* For animating gradient position */
+            animation: gradientMovement 20s ease infinite;
+            /* Existing movement animation */
+            transition: opacity 3s ease-in-out;
+            /* Smooth opacity transition for cross-fading */
+        }
+
+        /* Initial background gradients (can be set directly or via JS on load) */
+        body::before {
+            background-image: var(--gradient-1, linear-gradient(45deg, #6a11cb, #2575fc));
+            /* Default gradient 1 */
+            opacity: 1;
+            /* Initially visible */
+        }
+
+        body::after {
+            background-image: var(--gradient-2, linear-gradient(45deg, #fc5c7d, #6a82fb));
+            /* Default gradient 2 */
+            opacity: 0;
+            /* Initially hidden */
+        }
+
+        /* Class to toggle which layer is on top for the fade effect */
+        body.fade-to-after::before {
+            opacity: 0;
+        }
+
+        body.fade-to-after::after {
+            opacity: 1;
+        }
+
+        @keyframes gradientMovement {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* --- Main Container (Glassmorphism) --- */
+        .container {
+            width: 95%;
+            max-width: 700px;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            color: #fff;
+            animation: fadeIn 1s ease-out;
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* --- Typography (with Shadow for Readability) --- */
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0px 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            font-weight: 300;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        /* --- Form Elements (High Contrast Design) --- */
+        .input-group {
+            display: flex;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 50px;
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        #url-input {
+            flex-grow: 1;
+            border: none;
+            outline: none;
+            padding: 18px 25px;
+            font-size: 1.1rem;
+            background: transparent;
+            color: #ffffff;
+            border-radius: 50px 0 0 50px;
+        }
+
+        #url-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #download-btn {
+            border: none;
+            outline: none;
+            padding: 18px 35px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.8);
+            color: #2c3e50;
+            cursor: pointer;
+            border-radius: 50px;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        #download-btn:hover {
+            background: #ffffff;
+            transform: scale(1.05);
+        }
+
+        /* --- Loader Animation --- */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #ffffff;
+            border-radius: 50%;
+            margin: 30px auto 0;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- Result Section --- */
+        #result {
+            margin-top: 30px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #result img {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 10px;
+            margin: 0 auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        #video-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-top: 20px;
+            text-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .download-link {
+            display: inline-block;
+            margin-top: 25px;
+            padding: 14px 35px;
+            background: #28a745;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .download-link:hover {
+            background: #218838;
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+        }
+
+        /* --- NEW: About Button --- */
+        /* --- NEW: Top Right Navigation --- */
+        .nav-buttons {
+            position: fixed;
+            top: 25px;
+            right: 30px;
+            z-index: 100;
+            display: flex;
+            gap: 15px;
+            /* Buttons ke beech ka space */
+        }
+
+        .nav-btn {
+            padding: 12px 25px;
+            /* Bada size karne ke liye */
+            font-size: 1rem;
+            font-weight: 500;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateY(-2px);
+            /* Halki si lift effect */
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- NEW: Modal Styles --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            /* Hidden by default */
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            width: 90%;
+            max-width: 600px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            color: #fff;
+            position: relative;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        /* --- Add these NEW animation rules to your CSS --- */
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+        }
+
+        .modal-content.closing {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .modal-content h2 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            text-shadow: 0px 1px 3px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content p {
+            font-size: 0.9rem;
+            text-align: left;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+
+        .modal-content .contact-form input,
+        .modal-content .contact-form textarea {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.25);
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .modal-content .contact-form button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #28a745;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .modal-content .contact-form button:hover {
+            background: #218838;
+        }
+
+        /* --- NEW: Footer Styles --- */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px 0;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            z-index: 50;
+        }
+
+        footer a {
+            color: #ffffff;
+            font-weight: 500;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        #form-status {
+            margin-top: 15px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-buttons">
+        <button id="home-btn" class="nav-btn">Home</button>
+        <button id="about-btn" class="nav-btn">About</button>
+    </div>
+
+    <div class="container">
+        <h1>Vortex Downloader</h1>
+        <p class="subtitle">Download YouTube videos in the highest quality with a single click.</p>
+        <form id="download-form">
+            <div class="input-group">
+                <input type="text" id="url-input" placeholder="Paste your YouTube video link here..." required>
+                <button type="submit" id="download-btn">Fetch</button>
+            </div>
+        </form>
+        <div id="loader-container"></div>
+        <div id="result"></div>
+    </div>
+
+    <div class="modal-overlay" id="about-modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Privacy Policy</h2>
+            <p>This website is for educational purposes only. We do not store, log, or share any video links or user
+                data. All processing is done on the client-side, and we have no access to your activities.</p>
+
+            <h2>Contact Us</h2>
+            <form class="contact-form" id="contact-form">
+                <input type="text" name="Name" placeholder="Your Name" required>
+                <input type="email" name="Email" placeholder="Your Email" required>
+                <textarea name="Message" rows="4" placeholder="Your Message" required></textarea>
+                <button type="submit">Send Message</button>
+                <div id="form-status"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const downloadForm = document.getElementById('download-form');
+        const urlInput = document.getElementById('url-input');
+        const loaderContainer = document.getElementById('loader-container');
+        const resultDiv = document.getElementById('result');
+        const body = document.body;
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) { color += letters[Math.floor(Math.random() * 16)]; }
+            return color;
+        }
+
+        // --- NEW: Background logic for smooth transitions ---
+        let currentGradientVar = 2; // Start by updating gradient-2, then gradient-1
+
+        function setRandomGradientBackground() {
+            const colors = [getRandomColor(), getRandomColor(), getRandomColor(), getRandomColor()];
+            const angle = Math.floor(Math.random() * 360);
+            const newGradient = `linear-gradient(${angle}deg, ${colors.join(', ')})`;
+
+            // Update the CSS variable for the *next* gradient
+            body.style.setProperty(`--gradient-${currentGradientVar}`, newGradient);
+
+            // Toggle the class to trigger the opacity transition
+            body.classList.toggle('fade-to-after');
+
+            // Switch the target gradient variable for the next cycle
+            currentGradientVar = (currentGradientVar === 1) ? 2 : 1;
+        }
+
+        // Call it once immediately to set the first random gradient
+        setRandomGradientBackground();
+
+        // Change background every 10 seconds (adjust as needed)
+        setInterval(setRandomGradientBackground, 10000); // 10000ms = 10 seconds
+
+        downloadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const videoURL = urlInput.value.trim();
+            if (videoURL === '') { alert('Please enter a valid YouTube URL.'); return; }
+
+            resultDiv.innerHTML = '';
+            loaderContainer.innerHTML = '<div class="loader"></div>';
+
+            try {
+                // Backend se info mangwana
+                const response = await fetch(`http://127.0.0.1:5000/api/info?url=${encodeURIComponent(videoURL)}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Error: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                displayOptions(data, videoURL); // Naya function call
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                resultDiv.innerHTML = `<p style="color: #ff8a8a; margin-top: 20px;">Error: ${error.message}</p>`;
+            } finally {
+                loaderContainer.innerHTML = '';
+            }
+        });
+
+        // --- UPDATED displayResult Function ---
+        // --- UPDATED displayResult Function for New API ---
+        // --- YEH FUNCTION REPLACE KARO ---
+        // --- Updated displayOptions Function (Theme Matching) ---
+        // --- Global Variable store karne ke liye ki user ne kya select kiya ---
+        let selectedQuality = null;
+
+        // --- 1. Updated Display Function (Creates Boxes instead of Dropdown) ---
+        // --- Updated Display Function (With FPS Logic) ---
+        function displayOptions(data, url) {
+            selectedQuality = null;
+
+            let boxesHTML = '';
+
+            if (data.resolutions && data.resolutions.length > 0) {
+                // Data loop
+                boxesHTML = data.resolutions.map(item => {
+                    // Check karein item object hai ya string (purani compatibility ke liye)
+                    let quality = item.quality || item;
+                    let fps = item.fps || 30; // Default 30 agar data na ho
+
+                    // Agar FPS 50 se zyada hai to "High FPS" style, warna normal
+                    let fpsClass = fps >= 50 ? '' : 'low-fps';
+                    let fpsText = fps > 0 ? `${fps} FPS` : '';
+
+                    // Box HTML structure
+                    return `
+            <div class="res-box" onclick="selectBox(this, '${quality}')">
+                <span class="res-text">${quality}</span>
+                <span class="fps-badge ${fpsClass}">${fpsText}</span>
+            </div>`;
+                }).join('');
+            } else {
+                boxesHTML = `<div class="res-box" onclick="selectBox(this, 'best')">Best Quality</div>`;
+            }
+
+            resultDiv.innerHTML = `
+        <img src="${data.thumbnail}" alt="Thumbnail" style="margin-bottom:15px; border-radius:12px; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+        <p id="video-title" style="font-size: 1.1rem; margin-bottom: 10px;">${data.title}</p>
+        
+        <p style="font-size: 0.9rem; opacity: 0.8;">Select Quality:</p>
+
+        <div class="resolution-grid">
+            ${boxesHTML}
+        </div>
+
+        <button id="start-download-btn" class="download-link" style="border: none; cursor: pointer; opacity: 0.5; pointer-events: none; transition: 0.3s;">
+            Download Video
+        </button>
+        
+        <p id="status-msg" style="margin-top: 15px; font-size: 0.85rem; color: #ffeb3b; display: none;"></p>
+    `;
+
+            document.getElementById('start-download-btn').addEventListener('click', () => processDownload(url));
+        }
+
+        // --- 2. Box Selection Logic (Click hone par kya hoga) ---
+        // Note: Is function ko window object pe daal rahe hain taaki HTML onclick isse dhoond sake
+        window.selectBox = function (element, quality) {
+            // Sabhi boxes se 'selected' class hatao
+            document.querySelectorAll('.res-box').forEach(box => box.classList.remove('selected'));
+
+            // Jispe click kiya usko highlight karo
+            element.classList.add('selected');
+
+            // Variable update karo
+            selectedQuality = quality;
+
+            // Download button enable karo
+            const btn = document.getElementById('start-download-btn');
+            btn.style.opacity = "1";
+            btn.style.pointerEvents = "all";
+            btn.innerText = `Download ${quality}`;
+        }
+
+        // --- 3. Updated Process Download Logic ---
+        // --- Updated Process Download (Link Method) ---
+        // --- Deployment Friendly Process Function ---
+        // --- Updated Process Download (Fix Refresh Loop) ---
+        // --- Updated Process Download (Polling System) ---
+        // --- Updated Logic: Force Window Location Change ---
+        // --- Manual Click Download System ---
+        async function processDownload(url) {
+            if (!selectedQuality) return;
+
+            const statusMsg = document.getElementById('status-msg');
+            const downloadBtn = document.getElementById('start-download-btn');
+
+            // Step 1: UI ko 'Wait' mode mein daalo
+            statusMsg.style.display = 'block';
+            statusMsg.innerText = `Connecting to server...`;
+            statusMsg.style.color = "#ffeb3b";
+
+            downloadBtn.style.opacity = "0.7";
+            downloadBtn.disabled = true;
+            downloadBtn.innerText = "Processing...";
+            downloadBtn.style.cursor = "wait";
+
+            try {
+                // Task Start
+                const startRes = await fetch('http://127.0.0.1:5000/start-download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url, quality: selectedQuality })
+                });
+                const startData = await startRes.json();
+                const taskId = startData.task_id;
+
+                // Step 2: Loop Check (Polling)
+                let attempts = 0;
+                statusMsg.innerText = `Preparing video... 0s`;
+
+                const interval = setInterval(async () => {
+                    attempts++;
+                    statusMsg.innerText = `Merging Video & Audio... (${attempts * 2}s)`;
+
+                    try {
+                        const checkRes = await fetch(`http://127.0.0.1:5000/check-status/${taskId}`);
+                        const statusData = await checkRes.json();
+
+                        if (statusData.status === 'completed') {
+                            // --- VIDEO READY! STOP CHECKING ---
+                            clearInterval(interval);
+
+                            statusMsg.innerText = "Video Ready! Click button below.";
+                            statusMsg.style.color = "#4caf50";
+
+                            // --- MAIN CHANGE: Button ko Download Link bana do ---
+                            downloadBtn.innerText = "SAVE VIDEO NOW ⬇️";
+                            downloadBtn.disabled = false;
+                            downloadBtn.style.opacity = "1";
+                            downloadBtn.style.cursor = "pointer";
+                            downloadBtn.style.background = "#28a745"; // Bright Green
+
+                            // Button ka purana listener hata kar naya lagana mushkil hai, 
+                            // isliye hum button ko clone karke replace kar denge
+                            const newBtn = downloadBtn.cloneNode(true);
+                            downloadBtn.parentNode.replaceChild(newBtn, downloadBtn);
+
+                            // Click karne par File Download Link khulega
+                            newBtn.addEventListener('click', () => {
+                                // Relative URL use kar rahe hain taaki host ka issue na ho
+                                const finalLink = `http://127.0.0.1:5000${statusData.download_url}`;
+                                window.location.href = finalLink;
+                            });
+
+                        }
+                        else if (statusData.status === 'failed') {
+                            clearInterval(interval);
+                            throw new Error(statusData.error);
+                        }
+                    } catch (err) {
+                        clearInterval(interval);
+                        handleError(err);
+                    }
+                }, 2000);
+
+            } catch (error) {
+                handleError(error);
+            }
+
+            function handleError(e) {
+                console.error(e);
+                statusMsg.innerText = "Error: " + e.message;
+                statusMsg.style.color = "#ff8a8a";
+                downloadBtn.disabled = false;
+                downloadBtn.style.cursor = "pointer";
+                downloadBtn.innerText = "Retry";
+            }
+        }
+
+        /* --- NEW: Navigation Logic --- */
+        const homeBtn = document.getElementById('home-btn');
+
+        homeBtn.addEventListener('click', () => {
+            location.reload(); // Page ko refresh karega
+        });
+
+
+        // --- 4. DOWNLOADER LOGIC --- 
+        // --- NEW HELPER FUNCTIONS ---
+        function formatDuration(seconds) {
+            if (isNaN(seconds)) return 'N/A';
+            const date = new Date(seconds * 1000);
+            const hh = date.getUTCHours();
+            const mm = date.getUTCMinutes();
+            const ss = date.getUTCSeconds().toString().padStart(2, '0');
+            if (hh) {
+                return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
+            }
+            return `${mm}:${ss}`;
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (!+bytes) return 'N/A';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+        }
+
+
+        /* --- NEW: Modal and Contact Form Logic --- */
+        const aboutBtn = document.getElementById('about-btn');
+        const aboutModal = document.getElementById('about-modal');
+        const closeModalBtn = aboutModal.querySelector('.close-btn');
+        const contactForm = document.getElementById('contact-form');
+        const formStatus = document.getElementById('form-status');
+        const privacyLink = document.getElementById('privacy-link'); // <-- NEW: Get the footer link
+
+        aboutBtn.addEventListener('click', () => { aboutModal.style.display = 'flex'; });
+        // ADD THIS NEW, IMPROVED CODE
+
+        // Function to handle closing the modal with animation
+        function closeModal() {
+            const modalContent = aboutModal.querySelector('.modal-content');
+            modalContent.classList.add('closing'); // Closing animation wali class lagao
+
+            // Animation poora hone ka intezar karo, fir modal ko hide karo
+            setTimeout(() => {
+                aboutModal.style.display = 'none'; // Animation ke baad hide karo
+                modalContent.classList.remove('closing'); // Class hata do taaki agli baar modal aache se khule
+            }, 500); // Yeh time (500ms) CSS ke animation duration se match hona chahiye
+        }
+
+        // Event listeners ko naye function se connect karo
+        closeModalBtn.addEventListener('click', closeModal);
+        aboutModal.addEventListener('click', (e) => {
+            if (e.target === aboutModal) {
+                closeModal();
+            }
+        });
+
+        contactForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            formStatus.textContent = 'Sending...';
+            const scriptURL = 'https://script.google.com/macros/s/AKfycbykYRZEu6ikjSCFRCJaQR7ZZWj-HzgftZRUQO7QRyWP2yc_7KPVOt--FNbcusKFC0Fr/exec'; // <-- IMPORTANT: PASTE YOUR URL HERE
+            const formData = new FormData(contactForm);
+
+            fetch(scriptURL, { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.result === 'success') {
+                        formStatus.style.color = '#28a745';
+                        formStatus.textContent = 'Message sent successfully!';
+                        contactForm.reset();
+                    } else {
+                        throw new Error(data.error || 'Unknown error');
+                    }
+                })
+                .catch(error => {
+                    formStatus.style.color = '#ff8a8a';
+                    formStatus.textContent = 'Error sending message.';
+                    console.error('Error!', error.message);
+                });
+        });
+    </script>
+    <footer>
+        <p>&copy; 2025 Vortex Downloader | <a href="#" id="privacy-link">Privacy Policy</a></p>
+    </footer>
+</body>
+
+</html>
